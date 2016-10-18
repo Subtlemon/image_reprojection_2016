@@ -5,7 +5,7 @@ class CameraParams {
     CameraParams(double height, double FOV_x, double FOV_y, double roll, double pitch, double yaw);
     ~CameraParams();
 
-    void correct(int x, int y, int maxX, int maxY, int& outX, int& outY);
+    void calcDistance(int x, int y, int maxX, int maxY, double& east, double& north);
 
   private:
     double findXoverZ(int x, int maxX);
