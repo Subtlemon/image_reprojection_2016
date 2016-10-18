@@ -2,14 +2,14 @@
 
 class CameraParams {
   public:
-    CameraParams(double height, double FOV_x, double FOV_y, double roll, double pitch, double yaw);
+    CameraParams(double altitude, double FOV_x, double FOV_y, int width, int height, double roll, double pitch, double yaw);
     ~CameraParams();
 
-    void calcDistance(int x, int y, int maxX, int maxY, double& east, double& north);
+    void calcDistance(int x, int y, double& east, double& north);
 
   private:
-    double findXoverZ(int x, int maxX);
-    double findYoverZ(int y, int maxY);
+    double findXoverZ(int x, int width, double FOV, double tilt);
 
-    double height, FOV_x, FOV_y, roll, pitch, yaw;
+    double altitude, FOV_x, FOV_y, roll, pitch, yaw;
+    int width, height;
 };
