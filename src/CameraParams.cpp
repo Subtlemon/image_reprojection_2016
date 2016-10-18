@@ -69,8 +69,8 @@ CameraParams::CameraParams(double altitude, double FOV_x, double FOV_y, int widt
     this->FOV_y = FOV_y * PI / 180.;
     this->width = width;
     this->height = height;
-    this->roll = roll / 180.;
-    this->pitch = pitch / 180.;
+    this->roll = roll * PI / 180.;
+    this->pitch = pitch * PI / 180.;
     this->yaw = yaw * PI / 180.;
 }
 
@@ -93,27 +93,25 @@ CameraParams::~CameraParams(){
  * @param[out] north The distance north of the camera location (same units as altitude).
  */
 void CameraParams::calcDistance(int x, int y, double& east, double& north) {
-    double deltaX = findXoverZ(x, width, FOV_x, roll);
-    double deltaY = findXoverZ(y, height, FOV_y, pitch);
 
-    // The vector that extends to the ground from the camera can be represented as:
-    //
-    // [ x(t) ]   [ deltaX ]     [   0    ]
-    // [ y(t) ] = [ deltaY ] t + [   0    ]
-    // [ z(t) ]   [   -1   ]     [ height ]
-    //
-    // (Assuming that the camera lens is tiny compared to height)
-    // This vector intersects with the ground (plane z=0) at t = height
-    // therefore:
-    double distanceX = deltaX * height;
-    double distanceY = deltaY * height;
+    // define a unit vector pointing down
+    double u[3] = {0., 0., -1.};
 
-    // rotate this by -yaw degrees
-    double sinYaw = sin(0-yaw);
-    double cosYaw = cos(0-yaw);
+    // rotate the vector in x and y axis based on pixel location
+    rotateY(u, findAngle(x, width, FOV_x));
+    rotateX(u, findAngle(y, height, FOV_y));
 
-    east = distanceX * cosYaw - distanceY * sinYaw;
-    north = distanceX * sinYaw + distanceY * cosYaw;
+    // rotate the vector in X, Y, and Z
+    rotateX(u, 0-pitch);
+    rotateY(u, roll);
+    rotateZ(u, 0-yaw);
+
+    // find the point at which it intersects with plane z=0
+    double multiple = 0-altitude/u[2];
+    
+    // extend x and y by multiple
+    east = u[0] * multiple;
+    north = u[1] * multiple;
 }
 
 /**
@@ -145,4 +143,60 @@ double CameraParams::findXoverZ(int x, int width, double FOV, double tilt) {
 
     // tan(theta) = deltaX / 1;
     return tan(theta);
+}
+
+/**
+ * @brief Rotates a vector along the x-axis.
+ */
+void CameraParams::rotateX(double u[3], double theta) {
+    double sine = sin(theta);
+    double cosine = cos(theta);
+    // u[0] untouched
+    u[1] = u[1] * cosine - u[2] * sine;
+    u[2] = u[1] * sine + u[2] * cosine;
+}
+
+
+/**
+ * @brief Rotates a vector along the y-axis.
+ */
+void CameraParams::rotateY(double u[3], double theta) {
+    double sine = sin(theta);
+    double cosine = cos(theta);
+    u[0] = u[0] * cosine + u[2] * sine;
+    // u[1] untouched
+    u[2] = u[2] * cosine - u[0] * sine;
+}
+
+/**
+ * @brief Rotates a vector along the z-axis.
+ */
+void CameraParams::rotateZ(double u[3], double theta) {
+    double sine = sin(theta);
+    double cosine = cos(theta);
+    u[0] = u[0] * cosine - u[1] * sine;
+    u[1] = u[0] * sine + u[1] * cosine;
+}
+
+/**
+ * @brief Finds the angle at which the pixel is relative to the focal point.
+ */
+double CameraParams::findAngle(int x, int width, double FOV) {
+    
+    // Given the FOV, the furthest ray and middle ray (and by approximation, 
+    // all the rays) converge at distance d behind the lens, where d is
+    // measured in pixels.
+    double d = width / 2 / tan(FOV);
+
+    // If we put an imaginary stick of length d behind the lens at the
+    // midpoint, the line passing through pixel x makes an angle alpha with
+    // the imaginary line d.
+    return atan(((double)x-(double)width/2) / d);
+}
+
+/**
+ * @brief Prints a vector.
+ */
+void CameraParams::printVector(const double u[3]) {
+    std::cout << "X: " << u[0] << " Y: " << u[1] << " Z: " << u[2] << std::endl;
 }

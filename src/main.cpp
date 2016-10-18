@@ -10,19 +10,37 @@ int main1(int argc, char**argv);
 
 int main(int argc, char** argv) {
     CameraParams test(200, 
-            40, 30, 
+            30, 20, 
             100, 100, 
-            40, 10, 0);
+            20, 10, 0);
 
     // define a square
-    cv::Point2f square [4];
+    int squareSize = 32;
+    cv::Point2f square [squareSize];
     square[0] = cv::Point2f(0, 0);
-    square[1] = cv::Point2f(0, 100);
-    square[2] = cv::Point2f(100, 100);
-    square[3] = cv::Point2f(100, 0);
+    for (int c=1; c<squareSize/4; ++c) {
+        square[c] = cv::Point2f(0, c * 100 / squareSize * 4);
+        square[c + squareSize/4] = cv::Point2f(c * 100 / squareSize * 4, 100);
+        square[c + 2*squareSize/4] = cv::Point2f(100, 100 - c * 100 / squareSize * 4);
+        square[c + 3*squareSize/4] = cv::Point2f(100 - c * 100 / squareSize * 4, 0);
+    }
+    square[squareSize/4] = cv::Point2f(0, 100);
+    square[2*squareSize/4] = cv::Point2f(100, 100);
+    square[3*squareSize/4] = cv::Point2f(100, 0);
+
+    // display the square
+    cv::Mat firstImage(100, 100, CV_8UC3);
+    for (int c=0; c<squareSize; ++c) {
+        cv::circle(firstImage, square[c], 5, cv::Scalar(0, 255-c*255/squareSize, c*255/squareSize), -1, 8);
+    }
+
+    cv::namedWindow("Display Window", cv::WINDOW_AUTOSIZE);
+    cv::imshow("Display Window", firstImage);
+    cv::waitKey(0);
+    cv::destroyWindow("Display Window");
 
     // warp the square
-    for(int c=0; c<4; ++c) {
+    for(int c=0; c<squareSize; ++c) {
         double x, y;
         test.calcDistance(square[c].x, square[c].y, x, y);
         square[c].x = x;
@@ -32,19 +50,26 @@ int main(int argc, char** argv) {
     // shift the warped square to the topleft
     int minx = square[0].x, miny = square[0].y;
     int maxx = minx, maxy = miny;
-    for (int c=1; c<4; ++c) {
+    for (int c=1; c<squareSize; ++c) {
         if (square[c].x < minx) minx = square[c].x;
         if (square[c].y < miny) miny = square[c].y;
         if (square[c].x > maxx) maxx = square[c].x;
         if (square[c].y > maxy) maxy = square[c].y;
     }
-    for (int c=0; c<4; ++c) {
+    for (int c=0; c<squareSize; ++c) {
         square[c].x -= minx;
         square[c].y -= miny;
     }
     maxx -= minx;
     maxy -= miny;
-    for (int c=0; c<4; ++c) {
+    // scale to 200x200
+    for (int c=0; c<squareSize; ++c) {
+        square[c].x *= 200. / maxx;
+        square[c].y *= 200. / maxy;
+    }
+    maxx *= 200. / maxx;
+    maxy *= 200. / maxy;
+    for (int c=0; c<squareSize; ++c) {
         std::cout << "x: " << square[c].x << " y: " << square[c].y << std::endl;
     }
     std::cout << "maxx: " << maxx << " maxy " << maxy << std::endl;
@@ -53,8 +78,8 @@ int main(int argc, char** argv) {
     cv::Mat image(maxy, maxx, CV_8UC3);
 
     // draw circles at each vertex
-    for (int c=0; c<4; ++c) {
-        cv::circle(image, square[c], 5, cv::Scalar(0, 0, 255), -1, 8);
+    for (int c=0; c<squareSize; ++c) {
+        cv::circle(image, square[c], 5, cv::Scalar(0, 255-c*255/squareSize, c*255/squareSize), -1, 8);
     }
 
     cv::imshow("Display Window", image);
