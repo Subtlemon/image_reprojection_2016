@@ -10,9 +10,9 @@ int main1(int argc, char**argv);
 
 int main(int argc, char** argv) {
     CameraParams test(200, 
-            30, 20, 
+            15, 30, 
             100, 100, 
-            20, 10, 0);
+            20, 25, 30);
 
     // define a square
     int squareSize = 32;
@@ -69,7 +69,6 @@ int main(int argc, char** argv) {
     }
     maxx *= 200. / maxx;
     maxy *= 200. / maxy;
-    
     // make new drawing
     cv::Mat image(maxy, maxx, CV_8UC3);
 

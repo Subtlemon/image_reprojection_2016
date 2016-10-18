@@ -8,6 +8,7 @@ class CameraParams {
     void calcDistance(int x, int y, double& east, double& north);
 
   private:
+    void rotateAbout(const double axis[4], double theta, double inout[4]);
     void rotateX(double u[3], double theta);
     void rotateY(double u[3], double theta);
     void rotateZ(double u[3], double theta);

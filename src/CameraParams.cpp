@@ -94,24 +94,41 @@ CameraParams::~CameraParams(){
  */
 void CameraParams::calcDistance(int x, int y, double& east, double& north) {
 
-    // define a unit vector pointing down
-    double u[3] = {0., 0., -1.};
+    // define a unit vectors for X Y and Z
+    double ux[4] = {1., 0., 0., 1.};
+    double uy[4] = {0., 1., 0., 1.};
+    double uz[4] = {0., 0., 1., 1.};
 
-    // rotate the vector in x and y axis based on pixel location
-    rotateY(u, 0-findAngle(x, width, FOV_x));
-    rotateX(u, findAngle(y, height, FOV_y));
+    // rotate the coordinate axis for yaw
+    rotateAbout(uz, yaw, ux);
+    rotateAbout(uz, yaw, uy);
 
-    // rotate the vector in X, Y, and Z
-    rotateX(u, 0-pitch);
-    rotateY(u, roll);
-    rotateZ(u, 0-yaw);
+    // rotate the coordinate axis for pitch
+    rotateAbout(ux, 0-pitch, uy);
+    rotateAbout(ux, 0-pitch, uz);
 
-    // find the point at which it intersects with plane z=0
+    // rotate the coordinate axis for roll
+    rotateAbout(uy, roll, ux);
+    rotateAbout(uy, roll, uz);
+
+    // check lengths of unit vectors
+
+    // create a vector pointing in the negative x coordinate axis
+    double u[3] = {0-uz[0], 0-uz[1], 0-uz[2]};
+
+    // add x-axis to said vector to account for x position within the picture
+    double factor = findXoverZ(x, width, FOV_x, 0);
+    u[0] += factor * ux[0];
+    u[1] += factor * ux[1];
+    u[2] += factor * ux[2];
+    factor = findXoverZ(y, height, FOV_y, 0);
+    u[0] += factor * uy[0];
+    u[1] += factor * uy[1];
+    u[2] += factor * uy[2];
+
     double multiple = 0-altitude/u[2];
-    
-    // extend x and y by multiple
-    east = u[0] * multiple;
-    north = u[1] * multiple;
+    east = multiple * u[0];
+    north = multiple * u[1];
 }
 
 /**
@@ -135,7 +152,7 @@ double CameraParams::findXoverZ(int x, int width, double FOV, double tilt) {
     // If we put an imaginary stick of length d behind the lens at the
     // midpoint, the line passing through pixel x makes an angle alpha with
     // the imaginary line d.
-    double alpha = atan((x-width) / d);
+    double alpha = atan(((double)x-(double)width/2.) / d);
 
     // Since the plane is tilted at angle tilt, the ray passing through the tip
     // of d and the pixel x makes angle theta with the normal to the ground (Z).
@@ -152,8 +169,8 @@ void CameraParams::rotateX(double u[3], double theta) {
     double sine = sin(theta);
     double cosine = cos(theta);
     // u[0] untouched
-    u[1] = u[1] * cosine - u[2] * sine;
-    u[2] = u[1] * sine + u[2] * cosine;
+    u[1] = u[1] * cosine + u[2] * sine;
+    u[2] = 0-u[1] * sine + u[2] * cosine;
 }
 
 
@@ -163,9 +180,9 @@ void CameraParams::rotateX(double u[3], double theta) {
 void CameraParams::rotateY(double u[3], double theta) {
     double sine = sin(theta);
     double cosine = cos(theta);
-    u[0] = u[0] * cosine + u[2] * sine;
+    u[0] = u[0] * cosine - u[2] * sine;
     // u[1] untouched
-    u[2] = u[2] * cosine - u[0] * sine;
+    u[2] = u[2] * cosine + u[0] * sine;
 }
 
 /**
@@ -175,7 +192,55 @@ void CameraParams::rotateZ(double u[3], double theta) {
     double sine = sin(theta);
     double cosine = cos(theta);
     u[0] = u[0] * cosine - u[1] * sine;
-    u[1] = u[0] * sine + u[1] * cosine;
+    u[1] = 0-u[0] * sine + u[1] * cosine;
+    // u[2] untouched
+}
+
+/**
+ * @brief Rotates a vector along any axis.
+ */
+void CameraParams::rotateAbout(const double axis[4], double theta, double inout[4]) {
+    // set up rotation matrix
+    double rotationMatrix[4][4];
+    double u = axis[0], v = axis[1], w = axis[2];
+    double u2 = u * u, v2 = v * v, w2 = w * w;
+    double L = (u2 + v2 + w2);
+    double l = sqrt(L);
+    double cosine = cos(theta), sine = sin(theta);
+
+    rotationMatrix[0][0] = (u2 + (v2 + w2) * cosine) / L;
+    rotationMatrix[0][1] = (u * v * (1 - cosine) - w * l * sine) / L;
+    rotationMatrix[0][2] = (u * w * (1 - cosine) + v * l * sine) / L;
+    rotationMatrix[0][3] = 0.0; 
+ 
+    rotationMatrix[1][0] = (u * v * (1 - cosine) + w * l * sine) / L;
+    rotationMatrix[1][1] = (v2 + (u2 + w2) * cosine) / L;
+    rotationMatrix[1][2] = (v * w * (1 - cosine) - u * l * sine) / L;
+    rotationMatrix[1][3] = 0.0; 
+ 
+    rotationMatrix[2][0] = (u * w * (1 - cosine) - v * l * sine) / L;
+    rotationMatrix[2][1] = (v * w * (1 - cosine) + u * l * sine) / L;
+    rotationMatrix[2][2] = (w2 + (u2 + v2) * cosine) / L;
+    rotationMatrix[2][3] = 0.0; 
+ 
+    rotationMatrix[3][0] = 0.0;
+    rotationMatrix[3][1] = 0.0;
+    rotationMatrix[3][2] = 0.0;
+    rotationMatrix[3][3] = 1.0;
+
+    // make output and multiply
+    double output[4];
+    for (int c=0; c<4; ++c) {
+        output[c] = 0;
+        for (int k=0; k<4; k++) {
+            output[c] += rotationMatrix[c][k] * inout[k];
+        }
+    }
+
+    // copy into inout
+    for (int c=0; c<4; ++c) {
+        inout[c] = output[c];
+    }
 }
 
 /**
