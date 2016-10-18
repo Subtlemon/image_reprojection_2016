@@ -58,10 +58,10 @@ cv::Mat ProjectionWindow::correctImage(const cv::Mat& image) {
     newSize.height *= 2;
 
     cv::Point2f destPoints[4];
-    destPoints[0] = cv::Point2f(newSize.width*0.35, newSize.height*0.35);
-    destPoints[1] = cv::Point2f(newSize.width*0.65, newSize.height*0.35);
-    destPoints[2] = cv::Point2f(newSize.width*0.65, newSize.height*0.65);
-    destPoints[3] = cv::Point2f(newSize.width*0.35, newSize.height*0.65);
+    destPoints[0] = cv::Point2f(newSize.width*0.25, newSize.height*0.25);
+    destPoints[1] = cv::Point2f(newSize.width*0.75, newSize.height*0.25);
+    destPoints[2] = cv::Point2f(newSize.width*0.75, newSize.height*0.75);
+    destPoints[3] = cv::Point2f(newSize.width*0.25, newSize.height*0.75);
 
     cv::Mat dst(newSize, image.type());
 
