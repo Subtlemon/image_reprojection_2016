@@ -69,11 +69,7 @@ int main(int argc, char** argv) {
     }
     maxx *= 200. / maxx;
     maxy *= 200. / maxy;
-    for (int c=0; c<squareSize; ++c) {
-        std::cout << "x: " << square[c].x << " y: " << square[c].y << std::endl;
-    }
-    std::cout << "maxx: " << maxx << " maxy " << maxy << std::endl;
-
+    
     // make new drawing
     cv::Mat image(maxy, maxx, CV_8UC3);
 

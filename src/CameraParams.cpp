@@ -98,7 +98,7 @@ void CameraParams::calcDistance(int x, int y, double& east, double& north) {
     double u[3] = {0., 0., -1.};
 
     // rotate the vector in x and y axis based on pixel location
-    rotateY(u, findAngle(x, width, FOV_x));
+    rotateY(u, 0-findAngle(x, width, FOV_x));
     rotateX(u, findAngle(y, height, FOV_y));
 
     // rotate the vector in X, Y, and Z
